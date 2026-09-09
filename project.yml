@@ -1,47 +1,88 @@
-name: Build unsigned IPA
+name: ForgeSignMobile
 
-on:
-  workflow_dispatch:
-  push:
-    branches: [main]
+options:
+  bundleIdPrefix: com.forgesign
+  deploymentTarget:
+    iOS: "16.4"
+  createIntermediateGroups: true
 
-jobs:
-  build:
-    runs-on: macos-15
-    timeout-minutes: 30
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.4"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+    ENABLE_BITCODE: "NO"
+    ENABLE_DEBUG_DYLIB: "NO"
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+targets:
+  ForgeSignMobile:
+    type: application
+    platform: iOS
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
+    sources:
+      - path: App
+      - path: Bridge
+      - path: vendor/zsign
+        excludes:
+          - "zsign.cpp"
+          - "third-party/minizip/iowin32.c"
+          - "third-party/minizip/iowin32.h"
+          - "third-party/minizip/mztools.c"
+          - "third-party/minizip/mztools.h"
 
-      - name: Generate Xcode project
-        run: xcodegen generate
+    resources:
+      - path: App/Resources
 
-      - name: Build unsigned archive
-        run: >-
-          xcodebuild
-          -project ForgeSignMobile.xcodeproj
-          -scheme ForgeSignMobile
-          -configuration Release
-          -sdk iphoneos
-          -destination 'generic/platform=iOS'
-          -archivePath "$RUNNER_TEMP/ForgeSignMobile.xcarchive"
-          CODE_SIGNING_ALLOWED=NO
-          CODE_SIGNING_REQUIRED=NO
-          archive
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.istore.mobile
+        PRODUCT_NAME: iStore
+        INFOPLIST_FILE: Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_OBJC_BRIDGING_HEADER: Bridge/ForgeSignBridge.h
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: FORGE_BRIDGE
+        CLANG_CXX_LANGUAGE_STANDARD: c++11
+        CLANG_CXX_LIBRARY: libc++
+        GCC_C_LANGUAGE_STANDARD: gnu11
 
-      - name: Package IPA
-        run: |
-          mkdir -p Payload
-          cp -R "$RUNNER_TEMP/ForgeSignMobile.xcarchive/Products/Applications/iStore.app" Payload/
-          zip -qry iStore-unsigned.ipa Payload
+        HEADER_SEARCH_PATHS:
+          - $(SRCROOT)/vendor/zsign
+          - $(SRCROOT)/vendor/zsign/common
+          - $(SRCROOT)/vendor/zsign/third-party/zlib
+          - $(SRCROOT)/vendor/openssl/include
 
-      - name: Upload unsigned IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: iStore-unsigned-ipa
-          path: iStore-unsigned.ipa
-          if-no-files-found: error
+        LIBRARY_SEARCH_PATHS:
+          - $(SRCROOT)/vendor/openssl
+
+        OTHER_LDFLAGS:
+          - -lcrypto
+          - -lssl
+
+        SWIFT_OPTIMIZATION_LEVEL: -Onone
+
+        GCC_PREPROCESSOR_DEFINITIONS:
+          - ZSIGN_VERSION=0.1.0
+
+  ForgeSignUISim:
+    type: application
+    platform: iOS
+
+    sources:
+      - path: App
+
+    resources:
+      - path: App/Resources
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.forgesign.mobile.uisim
+        PRODUCT_NAME: ForgeSignUISim
+        INFOPLIST_FILE: Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
