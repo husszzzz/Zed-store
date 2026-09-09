@@ -5,6 +5,12 @@ options:
     iOS: "16.4"
   createIntermediateGroups: true
 
+# 1. قسم المكتبات (Packages): أزل التعليقات وضع رابط مكتبة الزجاج التي استخدمتها مسبقاً
+# packages:
+#   GlassMorphismKit:
+#     url: https://github.com/مسار_مكتبة_الزجاج_هنا.git
+#     from: 1.0.0
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -30,8 +36,16 @@ targets:
           - "third-party/minizip/iowin32.h"
           - "third-party/minizip/mztools.c"
           - "third-party/minizip/mztools.h"
+      # 2. إذا كانت ملفات تأثير الزجاج موجودة في مجلد محلي داخل المشروع (وليس مكتبة خارجية)، أضف مساره هنا:
+      # - path: vendor/GlassUI 
+      
     resources:
       - path: App/Resources
+      
+    # 3. ربط المكتبة بالتطبيق (أزل التعليقات إذا استخدمت خطوة رقم 1)
+    # dependencies:
+    #   - package: GlassMorphismKit
+      
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.istore.mobile
@@ -59,12 +73,6 @@ targets:
         GCC_PREPROCESSOR_DEFINITIONS:
           - ZSIGN_VERSION=0.1.0
 
-  # UI-preview target for the iOS Simulator. The real app is device-only (the
-  # vendored OpenSSL has no simulator slice), so this target compiles just the
-  # SwiftUI/App layer WITHOUT the zsign bridge or OpenSSL — no FORGE_BRIDGE, no
-  # bridging header, no link flags. Signing is stubbed (see SigningService), but
-  # layout, navigation and the Sources/repo networking all run in the simulator.
-  # Safe to delete if you don't want a simulator preview build.
   ForgeSignUISim:
     type: application
     platform: iOS
