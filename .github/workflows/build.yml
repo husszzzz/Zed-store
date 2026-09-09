@@ -8,17 +8,25 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Show Xcode version
+      - name: Select Xcode 26
         run: |
+          echo "Available Xcode versions:"
+          ls -d /Applications/Xcode*.app || true
+
+          sudo xcode-select -s /Applications/Xcode.app
+
+          echo "Selected Xcode:"
           xcodebuild -version
-          xcode-select -p
+
+          echo "Available iOS SDKs:"
+          xcodebuild -showsdks
 
       - name: Install XcodeGen
         run: |
@@ -46,9 +54,11 @@ jobs:
       - name: Verify Xcode project
         run: |
           echo "=== Generated project ==="
+          test -d ForgeSignMobile.xcodeproj
           ls -la ForgeSignMobile.xcodeproj
 
-          test -d ForgeSignMobile.xcodeproj
+          echo "=== Xcode version ==="
+          xcodebuild -version
 
           echo "=== Schemes ==="
           xcodebuild \
@@ -72,7 +82,7 @@ jobs:
         run: |
           APP_PATH="$RUNNER_TEMP/ForgeSignMobile.xcarchive/Products/Applications/iStore.app"
 
-          echo "=== Application ==="
+          echo "=== Applications ==="
           ls -la "$RUNNER_TEMP/ForgeSignMobile.xcarchive/Products/Applications"
 
           test -d "$APP_PATH"
@@ -88,6 +98,7 @@ jobs:
 
           zip -qry iStore-unsigned.ipa Payload
 
+          echo "=== IPA ==="
           ls -lh iStore-unsigned.ipa
 
       - name: Upload unsigned IPA
