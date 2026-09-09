@@ -6,7 +6,7 @@ struct AboutView: View {
     @Environment(\.openURL) private var openURL
     @AppStorage("app.language") private var languageCode = AppLanguage.english.rawValue
 
-    private let developerName = "عبدالباسط خضير"
+    private let developerName = "الحسني للتحريب"
     private let telegramURL = "https://t.me/ipafilesfor"
     private let tiktokURL = "https://www.tiktok.com/@087.n"
 
