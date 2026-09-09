@@ -3,7 +3,8 @@ name: Build unsigned IPA
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   build:
@@ -14,30 +15,80 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Show Xcode version
+        run: |
+          xcodebuild -version
+          xcode-select -p
+
       - name: Install XcodeGen
-        run: brew install xcodegen
+        run: |
+          brew install xcodegen
+          xcodegen --version
+
+      - name: Check source files
+        run: |
+          echo "=== Root ==="
+          ls -la
+
+          echo "=== Required files ==="
+          test -f project.yml
+          test -f Info.plist
+          test -d App
+          test -d Bridge
+          test -d vendor/zsign
+          test -d vendor/openssl
 
       - name: Generate Xcode project
-        run: xcodegen generate
+        run: |
+          rm -rf ForgeSignMobile.xcodeproj
+          xcodegen generate
+
+      - name: Verify Xcode project
+        run: |
+          echo "=== Generated project ==="
+          ls -la ForgeSignMobile.xcodeproj
+
+          test -d ForgeSignMobile.xcodeproj
+
+          echo "=== Schemes ==="
+          xcodebuild \
+            -project ForgeSignMobile.xcodeproj \
+            -list
 
       - name: Build unsigned archive
-        run: >-
-          xcodebuild
-          -project ForgeSignMobile.xcodeproj
-          -scheme ForgeSignMobile
-          -configuration Release
-          -sdk iphoneos
-          -destination 'generic/platform=iOS'
-          -archivePath "$RUNNER_TEMP/ForgeSignMobile.xcarchive"
-          CODE_SIGNING_ALLOWED=NO
-          CODE_SIGNING_REQUIRED=NO
-          archive
+        run: |
+          xcodebuild \
+            -project ForgeSignMobile.xcodeproj \
+            -scheme ForgeSignMobile \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/ForgeSignMobile.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            archive
+
+      - name: Verify archive
+        run: |
+          APP_PATH="$RUNNER_TEMP/ForgeSignMobile.xcarchive/Products/Applications/iStore.app"
+
+          echo "=== Application ==="
+          ls -la "$RUNNER_TEMP/ForgeSignMobile.xcarchive/Products/Applications"
+
+          test -d "$APP_PATH"
 
       - name: Package IPA
         run: |
+          rm -rf Payload
           mkdir -p Payload
-          cp -R "$RUNNER_TEMP/ForgeSignMobile.xcarchive/Products/Applications/iStore.app" Payload/
+
+          cp -R \
+            "$RUNNER_TEMP/ForgeSignMobile.xcarchive/Products/Applications/iStore.app" \
+            Payload/iStore.app
+
           zip -qry iStore-unsigned.ipa Payload
+
+          ls -lh iStore-unsigned.ipa
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
